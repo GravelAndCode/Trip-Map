@@ -21,6 +21,8 @@ export function createTripMap(opts) {
     editable = true,
     trimMeters = 0,          // viewer privacy trim per day end
     musicUrl = null,         // string URL, or a function returning one (lets the editor change tracks live)
+    musicTracks = null,      // [{id,name}] -> renders a track picker in the sidebar (editable only)
+    homeCta = false,         // viewer mode: show "Make your own trip map" links
     on = {},                 // persistence callbacks (see bottom)
   } = opts;
 
@@ -43,6 +45,8 @@ export function createTripMap(opts) {
         <div class="ov"><span class="n" id="ov-days">0</span><span class="l">Days</span></div>
       </div>
       <button class="btn amber" id="play-trip"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play the trip</button>
+      ${editable && musicTracks ? `<div id="music-row"><span class="mr-note">♪ Tour music</span><select id="music-sel"><option value="">No music</option>${musicTracks.map((t) => `<option value="${t.id}">${t.name}</option>`).join('')}</select></div>` : ''}
+      ${homeCta ? '<a class="btn ghost" id="home-cta" href="/">Make your own trip map →</a>' : ''}
     </div>
     <div id="scroll">
       <div class="sec-label">Days</div>
@@ -77,6 +81,8 @@ export function createTripMap(opts) {
 
   mainEl.innerHTML = `
     <div id="map"></div>
+    <button id="panel-toggle" title="Show / hide panel"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <button id="fab-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play the trip</button>
     <div id="tiles">
       <button class="tile-btn" data-tile="trail">Trail</button>
       <button class="tile-btn on" data-tile="sat">Satellite</button>
@@ -128,14 +134,15 @@ export function createTripMap(opts) {
           <div class="te-stat"><div class="n" id="te-ft">0</div><div class="l">Ft climbed</div></div>
           <div class="te-stat"><div class="n" id="te-ph">0</div><div class="l">Photos</div></div>
         </div>
-        <div class="te-btns"><button class="btn" id="te-replay">Replay</button><button class="btn amber" id="te-done">Done</button></div>
+        <div class="te-btns"><button class="btn" id="te-replay">Replay</button>${homeCta ? '<a class="btn amber" href="/">Make your own</a>' : '<button class="btn amber" id="te-done">Done</button>'}${homeCta ? '<button class="btn" id="te-done">Done</button>' : ''}</div>
       </div>
     </div>`;
 
   const $ = (sel) => mainEl.querySelector(sel) || panelEl.querySelector(sel);
 
   // ---------- map ----------
-  const map = L.map($('#map'), { zoomControl: true, attributionControl: false }).setView([39.55, -107.32], 6);
+  const map = L.map($('#map'), { zoomControl: false, attributionControl: false }).setView([39.55, -107.32], 6);
+  L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.attribution({ prefix: false, position: 'bottomright' }).addAttribution('© OpenStreetMap · Esri · CARTO').addTo(map);
   const tileTrail = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
   const satImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19 });
@@ -169,6 +176,14 @@ export function createTripMap(opts) {
   photoLayer.on('clusterclick', (a) => a.layer.spiderfy());
   photoLayer.addTo(map);
 
+  // panel show/hide (collapse on desktop, slide-over drawer on phones)
+  if (window.matchMedia('(max-width: 720px)').matches) panelEl.classList.add('closed');
+  $('#panel-toggle').onclick = () => {
+    panelEl.classList.toggle('closed');
+    setTimeout(() => map.invalidateSize(), 240);
+  };
+  $('#fab-play').onclick = () => startTour();
+
   // ---------- title ----------
   const titleInput = $('#trip-title');
   titleInput.oninput = () => { title = titleInput.value; };
@@ -199,7 +214,7 @@ export function createTripMap(opts) {
       id: crypto.randomUUID(),
       name: g.name || file.name.replace(/\.gpx$/i, '') || `Day ${dayCounter}`,
       color: DAY_COLORS[days.length % DAY_COLORS.length],
-      pts, distM: buildCum(pts).distM, gainM: elevationGain(pts),
+      pts, distM: buildCum(g.pts).distM, gainM: elevationGain(g.pts),
     };
     days.push(makeDay(rec));
     renderDays(); updateOverview(); updateTimePlaceUI();
@@ -801,7 +816,7 @@ export function createTripMap(opts) {
     tour.prof = { X, Y, minE };
   }
   function fitTour() {
-    map.fitBounds(L.latLngBounds(tour.tp.map((p) => [p.lat, p.lon])), { animate: false, padding: [46, 46] });
+    map.fitBounds(L.latLngBounds(tour.tp.map((p) => [p.lat, p.lon])), { animate: false, paddingTopLeft: [30, 64], paddingBottomRight: [30, 150] });
   }
   function lockMap(off) {
     ['dragging', 'scrollWheelZoom', 'doubleClickZoom', 'touchZoom', 'keyboard', 'boxZoom'].forEach((h) => {
@@ -820,13 +835,21 @@ export function createTripMap(opts) {
     tour.glow = L.polyline([], { color: AMBER, weight: 13, opacity: 0.16, lineJoin: 'round', lineCap: 'round' }).addTo(map);
     tour.trail = L.polyline([], { color: AMBER, weight: 5, opacity: 0.95, lineJoin: 'round', lineCap: 'round' }).addTo(map);
     tour.dot = L.marker([tour.tp[0].lat, tour.tp[0].lon], { icon: L.divIcon({ className: '', html: '<div class="pos-dot"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), zIndexOffset: 2000 }).addTo(map);
+    // decode every tour photo up front so crossfades never flash
+    tour.shots.forEach((sh) => sh.phs.forEach((p) => {
+      if (!p._pre) { p._pre = new Image(); p._pre.src = p.url; if (p._pre.decode) p._pre.decode().catch(() => {}); }
+    }));
     const el = $('#tour');
     el.classList.add('on');
     $('#tour-end').classList.remove('show');
     $('#tc-play').textContent = 'Pause';
     $('#tc-speed').textContent = tour.speed + '×';
-    fitTour();
-    requestAnimationFrame(() => { el.classList.add('rolling'); drawTourProfile(); });
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+      fitTour();
+      el.classList.add('rolling');
+      drawTourProfile();
+    });
     musicStart();
     tour.last = 0; tour.raf = requestAnimationFrame(tourStep);
   }
@@ -911,10 +934,13 @@ export function createTripMap(opts) {
     img.style.opacity = showing ? '0' : '1';
     frame.insertBefore(img, frame.querySelector('.pc-cap'));
     if (showing) {
-      requestAnimationFrame(() => requestAnimationFrame(() => {
+      const reveal = () => requestAnimationFrame(() => requestAnimationFrame(() => {
         img.style.opacity = '1';
         olds.forEach((o) => { o.style.opacity = '0'; setTimeout(() => o.remove(), 560); });
       }));
+      if (img.decode) img.decode().then(reveal).catch(reveal);
+      else if (img.complete) reveal();
+      else { img.onload = reveal; img.onerror = reveal; }
     }
     const hasCap = !!(ph.caption && ph.caption.trim());
     card.querySelector('.pc-text').textContent = hasCap ? ph.caption : '';
@@ -1001,7 +1027,7 @@ export function createTripMap(opts) {
     if (tour.dot) map.removeLayer(tour.dot);
     if (!map.hasLayer(photoLayer)) photoLayer.addTo(map);
     lockMap(false);
-    fitAll();
+    setTimeout(() => { map.invalidateSize(); fitAll(); }, 90);
   }
   $('#play-trip').onclick = startTour;
   $('#tc-exit').onclick = exitTour;
@@ -1082,6 +1108,9 @@ export function createTripMap(opts) {
         : `${r.placed} placed by time.` + (r.remaining ? ` ${r.remaining} still in the tray — place those by hand.` : ' All photos placed.');
     };
   }
+  const msel = $('#music-sel');
+  if (msel) msel.onchange = () => on.musicChanged && on.musicChanged(msel.value);
+
   const resizeHandler = () => { if (focusedDay()) drawProfile(); if (tour.on) drawTourProfile(); };
   window.addEventListener('resize', resizeHandler);
 
@@ -1089,6 +1118,7 @@ export function createTripMap(opts) {
   function load(data) {
     title = data.title || '';
     titleInput.value = title;
+    if (msel) msel.value = data.music || '';
     days = (data.days || []).map(makeDay);
     dayCounter = days.length;
     (data.photos || []).forEach((rec) => {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase, photoUrl, newSlug } from '../lib/supabase.js';
 import { createTripMap } from '../lib/engine.js';
@@ -34,6 +35,7 @@ export default function TripEditor({ session }) {
         mainEl: mainRef.current,
         editable: true,
         musicUrl: () => trackById(musicRef.current)?.file || null,
+        musicTracks: TRACKS,
         on: {
           title: (title) => supabase.from('trips').update({ title }).eq('id', id).then(() => {}),
           dayAdded: (d) =>
@@ -67,6 +69,11 @@ export default function TripEditor({ session }) {
             supabase.from('photos').update({ caption: ph.caption }).eq('id', ph.id).then(() => {}),
           photoDayAssigned: (ph) =>
             supabase.from('photos').update({ day_id: ph.dayId }).eq('id', ph.id).then(() => {}),
+          musicChanged: async (music) => {
+            musicRef.current = music;
+            const { data } = await supabase.from('trips').update({ music }).eq('id', id).select().single();
+            setTrip(data);
+          },
           photoDeleted: async (photoId) => {
             await supabase.storage.from('photos').remove([`${id}/${photoId}.jpg`]);
             await supabase.from('photos').delete().eq('id', photoId);
@@ -76,6 +83,7 @@ export default function TripEditor({ session }) {
       engineRef.current = engine;
       engine.load({
         title: t.title,
+        music: t.music,
         days: (dayRows || []).map((r) => ({
           id: r.id, name: r.name, color: r.color,
           pts: rowsToPts(r.pts), distM: r.dist_m, gainM: r.gain_m,
@@ -103,11 +111,6 @@ export default function TripEditor({ session }) {
     const { data } = await supabase.from('trips').update({ trim_ends: checked }).eq('id', id).select().single();
     setTrip(data);
   };
-  const setMusic = async (music) => {
-    musicRef.current = music;
-    const { data } = await supabase.from('trips').update({ music }).eq('id', id).select().single();
-    setTrip(data);
-  };
   const copyLink = () => {
     navigator.clipboard.writeText(shareUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1600); });
   };
@@ -116,10 +119,13 @@ export default function TripEditor({ session }) {
     <div id="tm-wrap">
       <div ref={panelRef} id="panel" />
       <div ref={mainRef} id="main" />
-      <div style={{ position: 'absolute', top: 10, right: 16, zIndex: 850, display: 'flex', gap: 8 }}>
-        <button className="btn sm" onClick={() => nav('/')}>‹ Trips</button>
-        <button className="btn sm amber" onClick={() => setSharePanel(!sharePanel)}>Share</button>
-      </div>
+      {document.getElementById('topbar-actions') && createPortal(
+        <>
+          <button className="btn sm" onClick={() => nav('/')}>‹ Trips</button>
+          <button className="btn sm amber" onClick={() => setSharePanel((v) => !v)}>Share</button>
+        </>,
+        document.getElementById('topbar-actions')
+      )}
       {sharePanel && trip && (
         <div className="share-pop" style={{ top: 48 }}>
           <h3>Share this trip</h3>
@@ -153,14 +159,6 @@ export default function TripEditor({ session }) {
               <input type="checkbox" checked={trip.trim_ends} onChange={(e) => setTrim(e.target.checked)} />
               <span className="knob" />
             </label>
-          </div>
-          <div className="share-row" style={{ display: 'block' }}>
-            <div style={{ marginBottom: 6 }}>Tour music</div>
-            <select value={trip.music} onChange={(e) => setMusic(e.target.value)}>
-              <option value="">No music</option>
-              {TRACKS.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-            <div className="hint" style={{ marginTop: 5 }}>Plays during the tour for you and anyone you share with.</div>
           </div>
         </div>
       )}

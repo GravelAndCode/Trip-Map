@@ -55,7 +55,7 @@ button{font-family:inherit}
 .auth .note{font-size:12px;color:var(--muted);margin-top:10px}
 
 /* ============ share panel ============ */
-.share-pop{position:absolute;top:52px;right:14px;z-index:900;background:var(--ink2);
+.share-pop{position:fixed;top:52px;right:14px;z-index:900;background:var(--ink2);
   border:1px solid var(--line);border-radius:12px;padding:16px;width:300px;
   box-shadow:0 14px 40px rgba(0,0,0,.5)}
 .share-pop h3{font-family:'Space Grotesk';font-size:15px;margin:0 0 12px}
@@ -82,7 +82,8 @@ button{font-family:inherit}
 #main{flex:1;position:relative;min-width:0}
 #map{position:absolute;inset:0;background:#0d1317}
 .leaflet-container{background:#0d1317}
-body.touring #panel{pointer-events:none;opacity:.4;transition:opacity .4s ease}
+body.touring #panel{display:none}
+body.touring #panel-toggle,body.touring #fab-play{display:none!important}
 
 #brand{padding:18px 18px 14px;border-bottom:1px solid var(--line)}
 .eyebrow{font-family:'JetBrains Mono';font-size:10.5px;letter-spacing:2px;text-transform:uppercase;
@@ -303,4 +304,60 @@ body.touring #panel{pointer-events:none;opacity:.4;transition:opacity .4s ease}
   #panel{width:280px;min-width:280px}
   .rd:nth-child(n+4){display:none}
   #photo-card{width:min(88vw,520px)}
+}
+
+
+/* ============ panel toggle / mobile drawer / fab ============ */
+#panel-toggle{position:absolute;top:14px;left:14px;z-index:840;width:38px;height:38px;
+  display:grid;place-items:center;background:var(--ink2);border:1px solid var(--line);
+  border-radius:9px;color:var(--paper);cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#panel-toggle:hover{border-color:#41525d}
+#panel.closed{display:none}
+#fab-play{display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:840;
+  align-items:center;gap:7px;background:var(--amber);color:#1a1206;border:none;border-radius:26px;
+  padding:12px 22px;font-family:'Inter';font-size:14px;font-weight:700;cursor:pointer;
+  box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.leaflet-top.leaflet-right .leaflet-control-zoom{margin-top:58px;margin-right:14px}
+
+#music-row{display:flex;align-items:center;gap:9px;margin-top:10px}
+.mr-note{font-family:'JetBrains Mono';font-size:10.5px;letter-spacing:.5px;color:var(--muted);
+  text-transform:uppercase;white-space:nowrap}
+#music-sel{flex:1;background:var(--ink3);color:var(--paper);border:1px solid var(--line);
+  border-radius:7px;padding:6px 8px;font-family:'Inter';font-size:12px;outline:none;min-width:0}
+#music-sel:focus{border-color:var(--amber)}
+#home-cta{width:100%;justify-content:center;margin-top:10px;text-decoration:none}
+#tour-end a.btn{text-decoration:none}
+
+/* smoother compositing for tour media */
+#photo-card{will-change:opacity,transform}
+#photo-card .frame img{will-change:opacity}
+
+/* ============ phone layout ============ */
+@media (max-width:720px){
+  #topbar{padding:8px 12px}
+  #topbar .who{display:none}
+  #panel{position:absolute;top:0;bottom:0;left:0;width:min(330px,88vw);min-width:0;z-index:830;
+    transform:translateX(0);transition:transform .22s ease;box-shadow:14px 0 44px rgba(0,0,0,.5)}
+  #panel.closed{display:flex;transform:translateX(-108%)}
+  #fab-play{display:flex}
+  #tiles{top:12px;right:12px}
+  .leaflet-top.leaflet-right .leaflet-control-zoom{margin-top:54px;margin-right:12px}
+  #dock{left:8px;right:8px;bottom:8px}
+  .rd{padding:8px 10px}
+  .rd .v{font-size:13.5px}
+  /* tour, phone-tuned */
+  .letterbox{height:5%}
+  #photo-card{width:92vw;max-width:92vw;top:41%}
+  #photo-card .frame{height:min(38vh,340px);box-shadow:0 12px 34px rgba(0,0,0,.55)}
+  #photo-card .pc-cap{font-size:13px;padding:18px 12px 10px}
+  #tour-ctrl{top:10px;right:10px;gap:5px;flex-wrap:wrap;justify-content:flex-end;max-width:72vw}
+  .tc-btn{padding:6px 8px;font-size:10.5px}
+  #tour-profile{height:52px}
+  #tour-stats{gap:12px;padding:6px 12px 8px}
+  .ts-day{font-size:12px}
+  .ts.mono{font-size:11px}
+  #daycard{top:13%}
+  #daycard .dc-n{font-size:22px}
+  #tour-end{padding:20px 22px;min-width:0;width:86vw}
+  #tour-end .te-stats{gap:16px}
 }

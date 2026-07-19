@@ -19,6 +19,7 @@ export default function App() {
       <div id="topbar">
         <Link to="/" className="logo">Trip Map</Link>
         <div className="spacer" />
+        <div id="topbar-actions" style={{ display: 'flex', gap: 8 }} />
         {session && (
           <>
             <span className="who">{session.user.email}</span>

@@ -29,13 +29,14 @@ export default function TripViewer() {
         editable: false,
         trimMeters: t.trim_ends ? 400 : 0,
         musicUrl: trackById(t.music)?.file || null,
+        homeCta: true,
       });
       engineRef.current = engine;
       engine.load({
         title: t.title,
         days: (dayRows || []).map((r) => ({
           id: r.id, name: r.name, color: r.color,
-          pts: rowsToPts(r.pts), distM: null, gainM: null, // recompute from trimmed view
+          pts: rowsToPts(r.pts), distM: r.dist_m, gainM: r.gain_m, // owner's full-route stats
         })),
         photos: (photoRows || [])
           .filter((r) => r.lat != null) // tray photos stay private to the owner
