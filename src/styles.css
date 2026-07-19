@@ -19,7 +19,8 @@ button{font-family:inherit}
 .btn.danger{color:var(--blaze)}
 
 /* ============ app shell ============ */
-#app-shell{display:flex;flex-direction:column;height:100vh}
+#app-shell{display:flex;flex-direction:column;height:100vh;height:100dvh}
+html,body{overflow:hidden;overscroll-behavior:none}
 #topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;background:var(--ink2);
   border-bottom:1px solid var(--line);flex-shrink:0}
 #topbar .logo{font-family:'JetBrains Mono';font-size:11px;letter-spacing:2px;text-transform:uppercase;
@@ -273,12 +274,12 @@ body.touring #panel-toggle,body.touring #fab-play{display:none!important}
 #photo-card .pc-cap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:22px 16px 13px;
   background:linear-gradient(180deg,transparent,rgba(6,9,11,.85));color:#fff;
   font-size:14.5px;line-height:1.45}
-#daycard{position:absolute;left:0;right:0;top:16%;text-align:center;z-index:3;opacity:0;
+#daycard{position:absolute;left:26px;top:calc(7% + 16px);text-align:left;z-index:3;opacity:0;
   transition:opacity .5s ease;pointer-events:none}
 #daycard.show{opacity:1}
 #daycard .dc-k{font-family:'JetBrains Mono';font-size:11px;letter-spacing:3px;text-transform:uppercase;
   color:var(--amber)}
-#daycard .dc-n{font-family:'Space Grotesk';font-weight:700;font-size:30px;color:#fff;margin-top:4px;
+#daycard .dc-n{font-family:'Space Grotesk';font-weight:700;font-size:22px;color:#fff;margin-top:3px;
   text-shadow:0 2px 20px rgba(0,0,0,.7)}
 #tour-ctrl{position:absolute;top:16px;right:16px;z-index:5;display:flex;gap:8px;align-items:center;
   pointer-events:auto}
@@ -356,8 +357,29 @@ body.touring #panel-toggle,body.touring #fab-play{display:none!important}
   #tour-stats{gap:12px;padding:6px 12px 8px}
   .ts-day{font-size:12px}
   .ts.mono{font-size:11px}
-  #daycard{top:13%}
-  #daycard .dc-n{font-size:22px}
+  #daycard{left:12px;top:calc(5% + 12px)}
+  #daycard .dc-n{font-size:16px}
   #tour-end{padding:20px 22px;min-width:0;width:86vw}
   #tour-end .te-stats{gap:16px}
 }
+
+
+/* ============ shared-link welcome ============ */
+#welcome{position:absolute;inset:0;z-index:900;display:none;align-items:center;justify-content:center;
+  background:rgba(8,11,13,.72);backdrop-filter:blur(5px);padding:20px}
+#welcome.show{display:flex}
+.w-card{background:var(--ink2);border:1px solid var(--line);border-radius:18px;padding:30px 32px;
+  max-width:400px;width:100%;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.w-card h2{font-family:'Space Grotesk';font-weight:700;font-size:26px;letter-spacing:-.5px;
+  color:#fff;margin:8px 0 14px}
+#w-stats{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;font-family:'JetBrains Mono';
+  font-size:12px;color:var(--muted);margin-bottom:22px}
+#w-stats b{color:var(--paper);font-weight:500}
+#w-play{width:100%;justify-content:center;padding:14px;font-size:15px}
+.w-explore{display:block;width:100%;margin-top:12px;background:none;border:none;color:var(--muted);
+  font-family:'Inter';font-size:12.5px;cursor:pointer;padding:6px}
+.w-explore:hover{color:var(--paper)}
+
+@keyframes fab-pulse{0%,100%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 0 rgba(232,164,76,.45)}
+  55%{box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 14px rgba(232,164,76,0)}}
+#fab-play{animation:fab-pulse 2.4s ease-out infinite}

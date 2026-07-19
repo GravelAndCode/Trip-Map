@@ -83,6 +83,15 @@ export function createTripMap(opts) {
     <div id="map"></div>
     <button id="panel-toggle" title="Show / hide panel"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <button id="fab-play"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play the trip</button>
+    <div id="welcome">
+      <div class="w-card">
+        <div class="eyebrow">Trip Map</div>
+        <h2 id="w-title"></h2>
+        <div id="w-stats"></div>
+        <button class="btn amber" id="w-play"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play the trip</button>
+        <button class="w-explore" id="w-explore">Explore the map first</button>
+      </div>
+    </div>
     <div id="tiles">
       <button class="tile-btn" data-tile="trail">Trail</button>
       <button class="tile-btn on" data-tile="sat">Satellite</button>
@@ -183,6 +192,8 @@ export function createTripMap(opts) {
     setTimeout(() => map.invalidateSize(), 240);
   };
   $('#fab-play').onclick = () => startTour();
+  $('#w-play').onclick = () => { $('#welcome').classList.remove('show'); startTour(); };
+  $('#w-explore').onclick = () => $('#welcome').classList.remove('show');
 
   // ---------- title ----------
   const titleInput = $('#trip-title');
@@ -889,8 +900,11 @@ export function createTripMap(opts) {
     }
     if (!tour.photoActive && tour.shotN < tour.shots.length && tour.dist >= tour.shots[tour.shotN].dist) {
       const shot = tour.shots[tour.shotN];
-      tour.photoActive = true; tour.queue = shot.phs; tour.qIdx = 0; tour.photoEndedAt = 0;
       const card = $('#photo-card');
+      // if the previous shot is still fading out, roll straight into a crossfade
+      const continuing = tour.photoEndedAt && now - tour.photoEndedAt < 800 && card.querySelector('.frame img');
+      tour.photoActive = true; tour.queue = shot.phs; tour.qIdx = 0; tour.photoEndedAt = 0;
+      if (continuing) card.classList.add('show');
       setCardPhoto(shot.phs[0], card);
       card.classList.add('show');
       tour.photoSwitchAt = now + holdFor(shot.phs[0], true);
@@ -915,6 +929,12 @@ export function createTripMap(opts) {
       fac = Math.min(envF(dNext), fB);
     }
     tour.dist += dt * (tour.totalDist / (BASE_SEC / tour.speed)) * fac;
+    // while a photo is up, the dot may drift but never past the NEXT photo's mark —
+    // dense clusters stay orderly instead of rapid-firing to catch up
+    if (tour.photoActive) {
+      const nxt = tour.shots[tour.shotN + 1];
+      if (nxt && tour.dist > nxt.dist - 1) tour.dist = Math.max(nxt.dist - 1, 0);
+    }
     if (tour.dist >= tour.totalDist) tour.dist = tour.totalDist;
     renderTourFrame();
     if (tour.dist >= tour.totalDist && !tour.photoActive && tour.shotN >= tour.shots.length) { endTour(); return; }
@@ -1131,6 +1151,17 @@ export function createTripMap(opts) {
       if (ph.gps) placePhotoLocal(ph, ph.gps.lat, ph.gps.lon);
     });
     renderDays(); renderTray(); updateOverview(); updateTimePlaceUI(); fitAll();
+    if (!editable && days.length) {
+      $('#w-title').textContent = title || 'A trip worth seeing';
+      const mi = Math.round(days.reduce((a, d) => a + d.stats.distM, 0) * M2MI);
+      const ft = Math.round(days.reduce((a, d) => a + d.stats.gainM, 0) * M2FT);
+      const ph = photos.filter((p) => p.placed).length;
+      $('#w-stats').innerHTML =
+        `<span><b>${mi.toLocaleString()}</b> mi</span><span><b>${ft.toLocaleString()}</b> ft climbed</span>` +
+        `<span><b>${days.length}</b> day${days.length === 1 ? '' : 's'}</span>` +
+        (ph ? `<span><b>${ph}</b> photos</span>` : '');
+      $('#welcome').classList.add('show');
+    }
   }
   function destroy() {
     exitTourSafe();
