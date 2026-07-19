@@ -725,15 +725,33 @@ export function createTripMap(opts) {
       if (audio) audio.pause();
       audio = new Audio(url); audio.loop = true; audio._src = url;
     }
-    audio.volume = 0; audio.muted = muted;
+    clearInterval(audio._fade);
+    try { audio.currentTime = 0; } catch {}          // every play starts from the top
+    try { audio.volume = 0; } catch {}
+    audio.muted = muted;
     audio.play().catch(() => {});
     let v = 0;
-    const fade = setInterval(() => { v = Math.min(0.85, v + 0.06); audio.volume = v; if (v >= 0.85) clearInterval(fade); }, 90);
+    audio._fade = setInterval(() => {
+      v = Math.min(0.85, v + 0.06);
+      try { audio.volume = v; } catch {}
+      if (v >= 0.85) clearInterval(audio._fade);
+    }, 90);
   }
   function musicStop() {
     if (!audio) return;
     const a = audio;
-    const fade = setInterval(() => { a.volume = Math.max(0, a.volume - 0.08); if (a.volume <= 0) { a.pause(); clearInterval(fade); } }, 70);
+    clearInterval(a._fade);
+    let ticks = 0;
+    a._fade = setInterval(() => {
+      ticks++;
+      try { a.volume = Math.max(0, a.volume - 0.08); } catch {}
+      // iOS ignores volume writes entirely — so after ~1s, stop no matter what
+      if (a.volume <= 0.01 || ticks > 15) {
+        clearInterval(a._fade);
+        a.pause();
+        try { a.currentTime = 0; } catch {}
+      }
+    }, 70);
   }
 
   function buildTour() {
