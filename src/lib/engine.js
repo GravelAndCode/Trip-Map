@@ -843,8 +843,11 @@ export function createTripMap(opts) {
     document.body.classList.add('touring');
     if (map.hasLayer(photoLayer)) map.removeLayer(photoLayer);
     lockMap(true);
-    tour.glow = L.polyline([], { color: AMBER, weight: 13, opacity: 0.16, lineJoin: 'round', lineCap: 'round' }).addTo(map);
-    tour.trail = L.polyline([], { color: AMBER, weight: 5, opacity: 0.95, lineJoin: 'round', lineCap: 'round' }).addTo(map);
+    // trail color must never match a visible day's route color
+    const usedColors = new Set(days.filter((d) => d.visible).map((d) => (d.color || '').toUpperCase()));
+    const trailColor = [AMBER, BLAZE, '#FFF3DC', '#4CC2E8', '#7DD38B'].find((c) => !usedColors.has(c.toUpperCase())) || '#FFFFFF';
+    tour.glow = L.polyline([], { color: trailColor, weight: 13, opacity: 0.16, lineJoin: 'round', lineCap: 'round' }).addTo(map);
+    tour.trail = L.polyline([], { color: trailColor, weight: 5, opacity: 0.95, lineJoin: 'round', lineCap: 'round' }).addTo(map);
     tour.dot = L.marker([tour.tp[0].lat, tour.tp[0].lon], { icon: L.divIcon({ className: '', html: '<div class="pos-dot"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }), zIndexOffset: 2000 }).addTo(map);
     // decode every tour photo up front so crossfades never flash
     tour.shots.forEach((sh) => sh.phs.forEach((p) => {
